@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>משחק התאמת תרגילי חשבון</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f8ff;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            color: #2c3e50;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .difficulty-selector {
+            margin: 20px 0;
+        }
+
+        .difficulty-btn {
+            padding: 10px 20px;
+            margin: 0 10px;
+            font-size: 1.2rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            color: white;
+        }
+
+        .easy { background-color: #27ae60; }
+        .medium { background-color: #f1c40f; }
+        .hard { background-color: #e74c3c; }
+
+        .exercises-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .exercise-card {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .exercise-card:hover {
+            transform: scale(1.05);
+        }
+
+        .selected {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .fade-out {
+            opacity: 0;
+            transform: scale(0);
+            pointer-events: none;
+        }
+
+        .message {
+            font-size: 1.2rem;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .success-message {
+            background-color: #27ae60;
+            color: white;
+        }
+
+        .error-message {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        @media (max-width: 600px) {
+            .exercises-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .difficulty-btn {
+                padding: 8px 16px;
+                font-size: 1rem;
+                margin: 5px;
+            }
+
+            .exercise-card {
+                font-size: 1.2rem;
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>משחק התאמת תרגילי חשבון</h1>
+        <div class="difficulty-selector">
+            <button class="difficulty-btn easy" onclick="setDifficulty('easy')">קל</button>
+            <button class="difficulty-btn medium" onclick="setDifficulty('medium')">בינוני</button>
+            <button class="difficulty-btn hard" onclick="setDifficulty('hard')">קשה</button>
+        </div>
+        <div class="exercises-grid" id="exercisesGrid"></div>
+        <div id="successMessage" class="message success-message">תשובה נכונה!</div>
+        <div id="errorMessage" class="message error-message">טעות! נסה שוב</div>
+    </div>
+
+    <script>
+        let difficulty = 'easy';
+        let selectedCards = [];
+        let exercises = [];
+        let remainingPairs = 5;
+
+        function setDifficulty(level) {
+            difficulty = level;
+            generateExercises();
+            resetGame();
+        }
+
+        function generateExercises() {
+            exercises = [];
+            let results = new Set();
+            let exercisePairs = [];
+
+            const range = {
+                easy: { min: 1, max: 10 },
+                medium: { min: 1, max: 20 },
+                hard: { min: 1, max: 50 }
+            }[difficulty];
+
+            while (exercisePairs.length < 5) {
+                let result;
+                do {
+                    result = Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
+                } while (results.has(result));
+
+                results.add(result);
+
+                const operators = ['+', '-', '*', '/'];
+                let exercise1, exercise2;
+
+                // יצירת זוג תרגילים עם אותה תוצאה
+                do {
+                    const op1 = operators[Math.floor(Math.random() * operators.length)];
+                    const op2 = operators[Math.floor(Math.random() * operators.length)];
+                    
+                    exercise1 = generateExercise(result, op1, range);
+                    exercise2 = generateExercise(result, op2, range);
+                } while (exercise1.expression === exercise2.expression);
+
+                exercisePairs.push([exercise1, exercise2]);
+            }
+
+            exercises = exercisePairs.flat();
+            shuffleArray(exercises);
+        }
+
+        function generateExercise(result, operator, range) {
+            let num1, num2, expression;
+
+            switch(operator) {
+                case '+':
+                    num1 = Math.floor(Math.random() * result);
+                    num2 = result - num1;
+                    expression = `${num1} + ${num2}`;
+                    break;
+                case '-':
+                    num1 = result + Math.floor(Math.random() * 5);
+                    num2 = num1 - result;
+                    expression = `${num1} - ${num2}`;
+                    break;
+                case '*':
+                    if (result === 0) {
+                        num1 = Math.floor(Math.random() * range.max);
+                        num2 = 0;
+                    } else {
+                        const factors = [];
+                        for(let i = 1; i <= result; i++) {
+                            if(result % i === 0) factors.push(i);
+                        }
+                        num1 = factors[Math.floor(Math.random() * factors.length)];
+                        num2 = result / num1;
+                    }
+                    expression = `${num1} × ${num2}`;
+                    break;
+                case '/':
+                    num2 = Math.floor(Math.random() * 4) + 2;
+                    num1 = result * num2;
+                    expression = `${num1} ÷ ${num2}`;
+                    break;
+            }
+
+            return {
+                expression: expression,
+                result: result
+            };
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function createCard(exercise, index) {
+            const card = document.createElement('div');
+            card.className = 'exercise-card';
+            card.textContent = exercise.expression;
+            card.dataset.index = index;
+            card.dataset.result = exercise.result;
+            card.onclick = () => handleCardClick(card);
+            return card;
+        }
+
+        function handleCardClick(card) {
+            if (card.classList.contains('fade-out') || selectedCards.includes(card)) {
+                return;
+            }
+
+            card.classList.add('selected');
+            selectedCards.push(card);
+
+            if (selectedCards.length === 2) {
+                const [card1, card2] = selectedCards;
+                
+                if (card1.dataset.result === card2.dataset.result) {
+                    // תשובה נכונה
+                    showMessage('successMessage');
+                    setTimeout(() => {
+                        card1.classList.add('fade-out');
+                        card2.classList.add('fade-out');
+                        remainingPairs--;
+                        
+                        if (remainingPairs === 0) {
+                            setTimeout(() => {
+                                alert('כל הכבוד! סיימת את המשחק בהצלחה!');
+                                resetGame();
+                            }, 500);
+                        }
+                    }, 1000);
+                } else {
+                    // טעות
+                    showMessage('errorMessage');
+                    if (window.navigator.vibrate) {
+                        window.navigator.vibrate(200);
+                    }
+                    
+                    setTimeout(() => {
+                        card1.classList.remove('selected');
+                        card2.classList.remove('selected');
+                    }, 1000);
+                }
+                
+                selectedCards = [];
+            }
+        }
+
+        function showMessage(messageId) {
+            const message = document.getElementById(messageId);
+            message.style.opacity = '1';
+            setTimeout(() => {
+                message.style.opacity = '0';
+            }, 2000);
+        }
+
+        function resetGame() {
+            const grid = document.getElementById('exercisesGrid');
+            grid.innerHTML = '';
+            selectedCards = [];
+            remainingPairs = 5;
+            
+            exercises.forEach((exercise, index) => {
+                grid.appendChild(createCard(exercise, index));
+            });
+        }
+
+        // התחלת המשחק
+        setDifficulty('easy');
+    </script>
+</body>
+</html>
